@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import types
+import subprocess
 from copy import copy
 from distutils import ccompiler
 from distutils.ccompiler import *
@@ -16,7 +17,7 @@ from numpy.distutils import log
 from numpy.distutils.compat import get_exception
 from numpy.distutils.exec_command import exec_command
 from numpy.distutils.misc_util import cyg2win32, is_sequence, mingw32, \
-                                      quote_args, get_num_build_jobs
+                                      get_num_build_jobs
 
 
 def replace_method(klass, method_name, func):
@@ -55,20 +56,24 @@ def CCompiler_spawn(self, cmd, display=None):
         if is_sequence(display):
             display = ' '.join(list(display))
     log.info(display)
-    s, o = exec_command(cmd)
-    if s:
+
+    try:
+        output = subprocess.check_output(
+            cmd, stderr=subprocess.STDOUT, universal_newlines=True,
+            # close_fds with piped output is not supported on windows
+            close_fds=sys.platform != "win32"
+        )
+    except subprocess.CalledProcessError:
         if is_sequence(cmd):
             cmd = ' '.join(list(cmd))
+        err = get_exception()
         try:
-            print(o)
+            print(err.output)
         except UnicodeError:
-            # When installing through pip, `o` can contain non-ascii chars
             pass
-        if re.search('Too many open files', o):
-            msg = '\nTry rerunning setup command until build succeeds.'
-        else:
-            msg = ''
-        raise DistutilsExecError('Command "%s" failed with exit status %d%s' % (cmd, s, msg))
+        raise DistutilsExecError(
+            'Command "%s" failed with exit status %d\n' % (cmd, err.returncode)
+        )
 
 replace_method(CCompiler, 'spawn', CCompiler_spawn)
 
@@ -601,8 +606,6 @@ ccompiler.new_compiler = new_compiler
 
 _distutils_gen_lib_options = gen_lib_options
 def gen_lib_options(compiler, library_dirs, runtime_library_dirs, libraries):
-    library_dirs = quote_args(library_dirs)
-    runtime_library_dirs = quote_args(runtime_library_dirs)
     r = _distutils_gen_lib_options(compiler, library_dirs,
                                    runtime_library_dirs, libraries)
     lib_opts = []
@@ -621,12 +624,6 @@ for _cc in ['msvc9', 'msvc', '_msvc', 'bcpp', 'cygwinc', 'emxc', 'unixc']:
     _m = sys.modules.get('distutils.' + _cc + 'compiler')
     if _m is not None:
         setattr(_m, 'gen_lib_options', gen_lib_options)
-
-_distutils_gen_preprocess_options = gen_preprocess_options
-def gen_preprocess_options (macros, include_dirs):
-    include_dirs = quote_args(include_dirs)
-    return _distutils_gen_preprocess_options(macros, include_dirs)
-ccompiler.gen_preprocess_options = gen_preprocess_options
 
 ##Fix distutils.util.split_quoted:
 # NOTE:  I removed this fix in revision 4481 (see ticket #619), but it appears
