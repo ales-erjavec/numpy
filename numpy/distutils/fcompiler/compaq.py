@@ -41,14 +41,14 @@ class CompaqFCompiler(FCompiler):
     module_include_switch = '-I'
 
     def get_flags(self):
-        return ['-assume no2underscore', '-nomixed_str_len_arg']
+        return ['-assume', 'no2underscore', '-nomixed_str_len_arg']
     def get_flags_debug(self):
-        return ['-g', '-check bounds']
+        return ['-g', '-check', 'bounds']
     def get_flags_opt(self):
-        return ['-O4', '-align dcommons', '-assume bigarrays',
-                '-assume nozsize', '-math_library fast']
+        return ['-O4', '-align', 'dcommons', '-assume', 'bigarrays',
+                '-assume', 'nozsize', '-math_library', 'fast']
     def get_flags_arch(self):
-        return ['-arch host', '-tune host']
+        return ['-arch', 'host', '-tune', 'host']
     def get_flags_linker_so(self):
         if sys.platform[:5]=='linux':
             return ['-shared']
