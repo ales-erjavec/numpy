@@ -230,7 +230,7 @@ class GnuFCompiler(FCompiler):
         return []
 
     def runtime_library_dir_option(self, dir):
-        return '-Wl,-rpath="%s"' % dir
+        return '-Wl,-rpath=%s' % dir
 
 class Gnu95FCompiler(GnuFCompiler):
     compiler_type = 'gnu95'
