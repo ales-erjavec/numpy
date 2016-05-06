@@ -66,6 +66,9 @@ def CCompiler_spawn(self, cmd, display=None):
 
     log.info(display)
 
+    if self.dry_run:
+        return
+
     try:
         output = subprocess.check_output(
             cmd, stderr=subprocess.STDOUT, universal_newlines=True,
