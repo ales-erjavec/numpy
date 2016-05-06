@@ -13,6 +13,11 @@ from distutils.errors import DistutilsExecError, DistutilsModuleError, \
 from distutils.sysconfig import customize_compiler
 from distutils.version import LooseVersion
 
+try:
+    from shlex import quote as sh_quote
+except ImportError:
+    from pipes import quote as sh_quote
+
 from numpy.distutils import log
 from numpy.distutils.compat import get_exception
 from numpy.distutils.exec_command import exec_command
@@ -35,11 +40,11 @@ def CCompiler_spawn(self, cmd, display=None):
 
     Parameters
     ----------
-    cmd : str
+    cmd : list of str
         The command to execute.
-    display : str or sequence of str, optional
+    display : str, optional
         The text to add to the log file kept by `numpy.distutils`.
-        If not given, `display` is equal to `cmd`.
+        If not given, the executed command will be logged.
 
     Returns
     -------
@@ -54,7 +59,11 @@ def CCompiler_spawn(self, cmd, display=None):
     if display is None:
         display = cmd
         if is_sequence(display):
-            display = ' '.join(list(display))
+            if os.name == "nt":
+                display = subprocess.list2cmdline(display)
+            else:
+                display = ' '.join(map(sh_quote, list(display)))
+
     log.info(display)
 
     try:
