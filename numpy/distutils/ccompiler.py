@@ -23,7 +23,7 @@ from numpy.distutils.compat import get_exception
 from numpy.distutils.exec_command import exec_command
 from numpy.distutils.misc_util import cyg2win32, is_sequence, mingw32, \
                                       get_num_build_jobs
-
+from numpy.distutils import subprocess_compat as subprocess
 
 def replace_method(klass, method_name, func):
     if sys.version_info[0] < 3:
