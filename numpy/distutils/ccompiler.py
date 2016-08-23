@@ -20,7 +20,6 @@ except ImportError:
 
 from numpy.distutils import log
 from numpy.distutils.compat import get_exception
-from numpy.distutils.exec_command import exec_command
 from numpy.distutils.misc_util import cyg2win32, is_sequence, mingw32, \
                                       get_num_build_jobs
 from numpy.distutils import subprocess_compat as subprocess
@@ -500,11 +499,11 @@ def CCompiler_get_version(self, force=False, ok_status=[0]):
             version = m.group('version')
             return version
 
-    status, output = exec_command(version_cmd, use_tee=0)
+    cproc = subprocess.run(version_cmd, stdout=subprocess.PIPE, shell=True)
 
     version = None
-    if status in ok_status:
-        version = matcher(output)
+    if cproc.returncode in ok_status:
+        version = matcher(cproc.stdout.rstrip("\n"))
         if version:
             version = LooseVersion(version)
     self.version = version

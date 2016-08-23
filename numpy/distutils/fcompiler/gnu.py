@@ -9,7 +9,7 @@ import tempfile
 from subprocess import Popen, PIPE, STDOUT
 
 from numpy.distutils.fcompiler import FCompiler
-from numpy.distutils.exec_command import exec_command
+from numpy.distutils import subprocess_compat as subprocess
 from numpy.distutils.misc_util import msvc_runtime_library
 from numpy.distutils.compat import get_exception
 
@@ -130,7 +130,7 @@ class GnuFCompiler(FCompiler):
                     get_makefile_filename = sc.get_makefile_filename
                 except AttributeError:
                     pass # i.e. PyPy
-                else: 
+                else:
                     filename = get_makefile_filename()
                     sc.parse_makefile(filename, g)
                 target = g.get('MACOSX_DEPLOYMENT_TARGET', '10.3')
@@ -153,11 +153,10 @@ class GnuFCompiler(FCompiler):
         return opt
 
     def get_libgcc_dir(self):
-        status, output = exec_command(self.compiler_f77 +
-                                      ['-print-libgcc-file-name'],
-                                      use_tee=0)
-        if not status:
-            return os.path.dirname(output)
+        s = subprocess.run(self.compiler_f77 + ['-print-libgcc-file-name'],
+                           stdout=subprocess.PIPE)
+        if not s.returncode:
+            return os.path.dirname(s.stdout.rstrip("\n"))
         return None
 
     def get_library_dirs(self):
@@ -345,11 +344,10 @@ class Gnu95FCompiler(GnuFCompiler):
         return opt
 
     def get_target(self):
-        status, output = exec_command(self.compiler_f77 +
-                                      ['-v'],
-                                      use_tee=0)
-        if not status:
-            m = TARGET_R.search(output)
+        s = subprocess.run(self.compiler_f77 + ['-v'],
+                           stdout=subprocess.PIPE)
+        if not s.returncode:
+            m = TARGET_R.search(s.stdout.rstrip("\n"))
             if m:
                 return m.group(1)
         return ""

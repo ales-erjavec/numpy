@@ -48,8 +48,16 @@ def compile(source,
         .. versionadded:: 1.11.0
 
     """
-    from numpy.distutils.exec_command import exec_command
+    from distutils.ccompiler import split_quoted
+    from numpy.distutils import subprocess_compat as subprocess
+
     import tempfile
+
+    if extra_args:
+        extra_args = split_quoted(extra_args)
+    else:
+        extra_args = []
+
     if source_fn is None:
         f = tempfile.NamedTemporaryFile(suffix=extension)
     else:
@@ -59,12 +67,15 @@ def compile(source,
         f.write(source)
         f.flush()
 
-        args = ' -c -m {} {} {}'.format(modulename, f.name, extra_args)
-        c = '{} -c "import numpy.f2py as f2py2e;f2py2e.main()" {}'
-        c = c.format(sys.executable, args)
-        status, output = exec_command(c)
+        args = [sys.executable,
+                '-c', 'import numpy.f2py as f2py2e; f2py2e.main()'
+                '-c', '-m', modulename, f.name, extra_args]
+        s = subprocess.run([sys.executable] + args + extra_args,
+                           stdout=subprocess.PIPE)
+        status = s.returncode
         if verbose:
-            print(output)
+            print(s.stdout)
+
     finally:
         f.close()
     return status

@@ -15,6 +15,7 @@ from distutils.file_util import copy_file
 from distutils.ccompiler import CompileError, LinkError
 import distutils
 from numpy.distutils.exec_command import exec_command
+from numpy.distutils import subprocess_compat as subprocess
 from numpy.distutils.mingw32ccompiler import generate_manifest
 from numpy.distutils.command.autodist import (check_gcc_function_attribute,
                                               check_gcc_variable_attribute,
@@ -117,9 +118,10 @@ Original exception was: %s, and the Compiler class was %s
                         # correct path when compiling in Cygwin but with
                         # normal Win Python
                         if d.startswith('/usr/lib'):
-                            s, o = exec_command(['cygpath', '-w', d],
-                                               use_tee=False)
-                            if not s: d = o
+                            s = subprocess.run(['cygpath', '-w', d],
+                                               stdout=subprocess.PIPE)
+                            if s.returncode == 0:
+                                d = s.stdout.rstrip("\n")
                         library_dirs.append(d)
                     for libname in self.fcompiler.libraries or []:
                         if libname not in libraries:
@@ -446,8 +448,9 @@ int main (void)
                 grabber.restore()
                 raise
             exe = os.path.join('.', exe)
-            exitstatus, output = exec_command(exe, execute_in='.',
-                                              use_tee=use_tee)
+            s = subprocess.run([exe], cwd=".", stdout=subprocess.PIPE)
+            exitstatus, output = s.returncode, s.stdout.rstrip("\n")
+
             if hasattr(os, 'WEXITSTATUS'):
                 exitcode = os.WEXITSTATUS(exitstatus)
                 if os.WIFSIGNALED(exitstatus):

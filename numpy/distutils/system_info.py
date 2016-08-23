@@ -145,8 +145,8 @@ import distutils.sysconfig
 from distutils import log
 from distutils.util import get_platform
 
-from numpy.distutils.exec_command import \
-    find_executable, exec_command, get_pythonexe
+from numpy.distutils.exec_command import find_executable, get_pythonexe
+from numpy.distutils import subprocess_compat as subprocess
 from numpy.distutils.misc_util import is_sequence, is_string, \
                                       get_shared_lib_extension
 from numpy.distutils.command.config import config as cmd_config
@@ -2133,9 +2133,9 @@ class _pkg_config_info(system_info):
 
     def get_config_output(self, config_exe, option):
         cmd = config_exe + ' ' + self.append_config_exe + ' ' + option
-        s, o = exec_command(cmd, use_tee=0)
-        if not s:
-            return o
+        s = subprocess.run(cmd, shell=True)
+        if s.returncode == 0:
+            return s.stdout.rstrip("\n")
 
     def calc_info(self):
         config_exe = find_executable(self.get_config_exe())

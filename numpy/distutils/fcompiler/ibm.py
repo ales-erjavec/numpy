@@ -5,7 +5,8 @@ import re
 import sys
 
 from numpy.distutils.fcompiler import FCompiler
-from numpy.distutils.exec_command import exec_command, find_executable
+from numpy.distutils import subprocess_compat as subprocess
+from numpy.distutils.exec_command import find_executable
 from numpy.distutils.misc_util import make_temp_file
 from distutils import log
 
@@ -35,7 +36,9 @@ class IBMFCompiler(FCompiler):
             lslpp = find_executable('lslpp')
             xlf = find_executable('xlf')
             if os.path.exists(xlf) and os.path.exists(lslpp):
-                s, o = exec_command(lslpp + ' -Lc xlfcmp')
+                s = subprocess.run([lslpp, '-Lc', 'xlfcmp'],
+                                   stdout=subprocess.PIPE)
+                o = s.stdout.rstrip("\n")
                 m = re.search('xlfcmp:(?P<version>\d+([.]\d+)+)', o)
                 if m: version = m.group('version')
 
