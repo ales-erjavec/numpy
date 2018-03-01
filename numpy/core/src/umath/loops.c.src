@@ -622,6 +622,7 @@ PyUFunc_On_Om(char **args, npy_intp *dimensions, npy_intp *steps, void *func)
     char *ptrs[NPY_MAXARGS];
     PyObject *arglist, *result;
     PyObject *in, **op;
+    PyObject *pyarg_stack[5] = {NULL, NULL, NULL, NULL, NULL};
     npy_intp i, j, ntot;
 
     ntot = nin+nout;
@@ -630,20 +631,45 @@ PyUFunc_On_Om(char **args, npy_intp *dimensions, npy_intp *steps, void *func)
         ptrs[j] = args[j];
     }
     for(i = 0; i < n; i++) {
-        arglist = PyTuple_New(nin);
-        if (arglist == NULL) {
-            return;
-        }
-        for(j = 0; j < nin; j++) {
-            in = *((PyObject **)ptrs[j]);
-            if (in == NULL) {
-                in = Py_None;
+        if (nin <= 5) {
+            for (j = 0; j < nin; j++) {
+                in = *((PyObject **)ptrs[j]);
+                pyarg_stack[j] = (in == NULL)? Py_None: in;
             }
-            PyTuple_SET_ITEM(arglist, j, in);
-            Py_INCREF(in);
+        } else {
+            arglist = PyTuple_New(nin);
+            if (arglist == NULL) {
+                return;
+            }
+            for(j = 0; j < nin; j++) {
+                in = *((PyObject **)ptrs[j]);
+                if (in == NULL) {
+                    in = Py_None;
+                }
+                PyTuple_SET_ITEM(arglist, j, in);
+                Py_INCREF(in);
+            }
         }
-        result = PyEval_CallObject(tocall, arglist);
-        Py_DECREF(arglist);
+        if (nin == 1) {
+            result = PyObject_CallFunctionObjArgs(tocall, pyarg_stack[0], NULL);
+        } else if (nin == 2) {
+            result = PyObject_CallFunctionObjArgs(
+                tocall, pyarg_stack[0], pyarg_stack[1], NULL);
+        } else if (nin == 3) {
+            result = PyObject_CallFunctionObjArgs(
+                tocall, pyarg_stack[0], pyarg_stack[1], pyarg_stack[2], NULL);
+        } else if (nin == 4) {
+            result = PyObject_CallFunctionObjArgs(
+                tocall, pyarg_stack[0], pyarg_stack[1], pyarg_stack[2],
+                pyarg_stack[3], NULL);
+        } else if (nin == 5) {
+            result = PyObject_CallFunctionObjArgs(
+                tocall, pyarg_stack[0], pyarg_stack[1], pyarg_stack[2],
+                pyarg_stack[3], pyarg_stack[4], NULL);
+        } else {
+            result = PyEval_CallObject(tocall, arglist);
+            Py_DECREF(arglist);
+        }
         if (result == NULL) {
             return;
         }
