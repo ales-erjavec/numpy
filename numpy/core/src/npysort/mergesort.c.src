@@ -70,6 +70,9 @@ mergesort0_@suff@(@type@ *pl, @type@ *pr, @type@ *pw)
         pm = pl + ((pr - pl) >> 1);
         mergesort0_@suff@(pl, pm, pw);
         mergesort0_@suff@(pm, pr, pw);
+        if (!@TYPE@_LT(*pm, *(pm - 1))) {
+            return;  /* already sorted ( *(pm - 1) <= *pm ) */
+        }
         for (pi = pw, pj = pl; pj < pm;) {
             *pi++ = *pj++;
         }
@@ -132,6 +135,9 @@ amergesort0_@suff@(npy_intp *pl, npy_intp *pr, @type@ *v, npy_intp *pw)
         pm = pl + ((pr - pl) >> 1);
         amergesort0_@suff@(pl, pm, v, pw);
         amergesort0_@suff@(pm, pr, v, pw);
+        if (!@TYPE@_LT(v[*pm], v[*(pm - 1)])) {
+            return; /* already sorted */
+        }
         for (pi = pw, pj = pl; pj < pm;) {
             *pi++ = *pj++;
         }
@@ -210,6 +216,9 @@ mergesort0_@suff@(@type@ *pl, @type@ *pr, @type@ *pw, @type@ *vp, size_t len)
         pm = pl + (((pr - pl)/len) >> 1)*len;
         mergesort0_@suff@(pl, pm, pw, vp, len);
         mergesort0_@suff@(pm, pr, pw, vp, len);
+        if (!@TYPE@_LT(pm, (pm - len), len)) {
+            return;  /* already sorted */
+        }
         @TYPE@_COPY(pw, pl, pm - pl);
         pi = pw + (pm - pl);
         pj = pw;
@@ -284,14 +293,18 @@ fail_0:
 static void
 amergesort0_@suff@(npy_intp *pl, npy_intp *pr, @type@ *v, npy_intp *pw, size_t len)
 {
+    /* helper for indexing into v */
+    #define v_(i) (v + (i) * len)
     @type@ *vp;
     npy_intp vi, *pi, *pj, *pk, *pm;
-
     if (pr - pl > SMALL_MERGESORT) {
         /* merge sort */
         pm = pl + ((pr - pl) >> 1);
         amergesort0_@suff@(pl, pm, v, pw, len);
         amergesort0_@suff@(pm, pr, v, pw, len);
+        if (!@TYPE@_LT(v_(*pm), v_(*(pm - 1)), len)) {
+            return;  /* already sorted */
+        }
         for (pi = pw, pj = pl; pj < pm;) {
             *pi++ = *pj++;
         }
@@ -299,7 +312,7 @@ amergesort0_@suff@(npy_intp *pl, npy_intp *pr, @type@ *v, npy_intp *pw, size_t l
         pj = pw;
         pk = pl;
         while (pj < pi && pm < pr) {
-            if (@TYPE@_LT(v + (*pm)*len, v + (*pj)*len, len)) {
+            if (@TYPE@_LT(v_(*pm), v_(*pj), len)) {
                 *pk++ = *pm++;
             }
             else {
@@ -317,12 +330,13 @@ amergesort0_@suff@(npy_intp *pl, npy_intp *pr, @type@ *v, npy_intp *pw, size_t l
             vp = v + vi*len;
             pj = pi;
             pk = pi - 1;
-            while (pj > pl && @TYPE@_LT(vp, v + (*pk)*len, len)) {
+            while (pj > pl && @TYPE@_LT(vp, v_(*pk), len)) {
                 *pj-- = *pk--;
             }
             *pj = vi;
         }
     }
+    #undef v_
 }
 
 
@@ -372,6 +386,9 @@ npy_mergesort0(char *pl, char *pr, char *pw, char *vp, npy_intp elsize,
         pm = pl + (((pr - pl)/elsize) >> 1)*elsize;
         npy_mergesort0(pl, pm, pw, vp, elsize, cmp, arr);
         npy_mergesort0(pm, pr, pw, vp, elsize, cmp, arr);
+        if (cmp(pm - elsize, pm, arr) < 0) {
+            return;  /* already sorted */
+        }
         GENERIC_COPY(pw, pl, pm - pl);
         pi = pw + (pm - pl);
         pj = pw;
@@ -443,6 +460,8 @@ static void
 npy_amergesort0(npy_intp *pl, npy_intp *pr, char *v, npy_intp *pw,
                 npy_intp elsize, PyArray_CompareFunc *cmp, PyArrayObject *arr)
 {
+    /* helper for indexing into v */
+    #define v_(i) (v + (i) * elsize)
     char *vp;
     npy_intp vi, *pi, *pj, *pk, *pm;
 
@@ -451,6 +470,9 @@ npy_amergesort0(npy_intp *pl, npy_intp *pr, char *v, npy_intp *pw,
         pm = pl + ((pr - pl) >> 1);
         npy_amergesort0(pl, pm, v, pw, elsize, cmp, arr);
         npy_amergesort0(pm, pr, v, pw, elsize, cmp, arr);
+        if (cmp(v_(*(pm - 1)), v_(*pm), arr) < 0) {
+            return; /* already sorted */
+        }
         for (pi = pw, pj = pl; pj < pm;) {
             *pi++ = *pj++;
         }
@@ -458,7 +480,7 @@ npy_amergesort0(npy_intp *pl, npy_intp *pr, char *v, npy_intp *pw,
         pj = pw;
         pk = pl;
         while (pj < pi && pm < pr) {
-            if (cmp(v + (*pm)*elsize, v + (*pj)*elsize, arr) < 0) {
+            if (cmp(v_(*pm), v_(*pj), arr) < 0) {
                 *pk++ = *pm++;
             }
             else {
@@ -482,6 +504,7 @@ npy_amergesort0(npy_intp *pl, npy_intp *pr, char *v, npy_intp *pw,
             *pj = vi;
         }
     }
+    #undef v_
 }
 
 
