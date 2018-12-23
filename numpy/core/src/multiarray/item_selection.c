@@ -165,14 +165,9 @@ PyArray_TakeFrom(PyArrayObject *self0, PyObject *indices0, int axis,
                 for (j = 0; j < m; j++) {
                     tmp = ((npy_intp *)(PyArray_DATA(indices)))[j];
                     if (tmp < 0) {
-                        while (tmp < 0) {
-                            tmp += max_item;
-                        }
-                    }
-                    else if (tmp >= max_item) {
-                        while (tmp >= max_item) {
-                            tmp -= max_item;
-                        }
+                        tmp = max_item - 1 - ((-tmp - 1) % max_item);
+                    } else if (tmp >= max_item) {
+                        tmp = tmp % max_item;
                     }
                     tmp_src = src + tmp * chunk;
                     if (needs_refcounting) {

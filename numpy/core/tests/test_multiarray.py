@@ -4390,6 +4390,9 @@ class TestTake(object):
     def test_wrap(self):
         x = np.random.random(24)*100
         x.shape = 2, 3, 4
+        assert_array_equal(x.take([-4], axis=0, mode='wrap')[0], x[0])
+        assert_array_equal(x.take([-3], axis=0, mode='wrap')[0], x[1])
+        assert_array_equal(x.take([-2], axis=0, mode='wrap')[0], x[0])
         assert_array_equal(x.take([-1], axis=0, mode='wrap')[0], x[1])
         assert_array_equal(x.take([2], axis=0, mode='wrap')[0], x[0])
         assert_array_equal(x.take([3], axis=0, mode='wrap')[0], x[1])

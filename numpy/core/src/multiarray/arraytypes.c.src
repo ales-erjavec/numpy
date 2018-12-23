@@ -4037,14 +4037,9 @@ static int
             for (j = 0; j < m_middle; j++) {
                 tmp = indarray[j];
                 if (tmp < 0) {
-                    while (tmp < 0) {
-                        tmp += nindarray;
-                    }
-                }
-                else if (tmp >= nindarray) {
-                    while (tmp >= nindarray) {
-                        tmp -= nindarray;
-                    }
+                    tmp = nindarray - 1 - ((-tmp - 1) % nindarray);
+                } else if (tmp >= nindarray) {
+                    tmp = tmp % nindarray;
                 }
                 if (NPY_LIKELY(nelem == 1)) {
                     *dest++ = *(src+tmp);
