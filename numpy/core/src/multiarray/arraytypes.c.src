@@ -4035,12 +4035,7 @@ static int
     case NPY_WRAP:
         for (i = 0; i < n_outer; i++) {
             for (j = 0; j < m_middle; j++) {
-                tmp = indarray[j];
-                if (tmp < 0) {
-                    tmp = nindarray - 1 - ((-tmp - 1) % nindarray);
-                } else if (tmp >= nindarray) {
-                    tmp = tmp % nindarray;
-                }
+                tmp = wrap_index(indarray[j], nindarray);
                 if (NPY_LIKELY(nelem == 1)) {
                     *dest++ = *(src+tmp);
                 }
@@ -4056,13 +4051,7 @@ static int
     case NPY_CLIP:
         for (i = 0; i < n_outer; i++) {
             for (j = 0; j < m_middle; j++) {
-                tmp = indarray[j];
-                if (tmp < 0) {
-                    tmp = 0;
-                }
-                else if (tmp >= nindarray) {
-                    tmp = nindarray - 1;
-                }
+                tmp = clip_index(indarray[j], nindarray);
                 if (NPY_LIKELY(nelem == 1)) {
                     *dest++ = *(src + tmp);
                 }

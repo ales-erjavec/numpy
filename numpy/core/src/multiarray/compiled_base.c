@@ -877,31 +877,11 @@ ravel_multi_index_loop(int ravel_ndim, npy_intp *ravel_dims,
                     }
                     break;
                 case NPY_WRAP:
-                    if (j < 0) {
-                        j += m;
-                        if (j < 0) {
-                            j = j % m;
-                            if (j != 0) {
-                                j += m;
-                            }
-                        }
-                    }
-                    else if (j >= m) {
-                        j -= m;
-                        if (j >= m) {
-                            j = j % m;
-                        }
-                    }
+                    j = wrap_index(j, m);
                     break;
                 case NPY_CLIP:
-                    if (j < 0) {
-                        j = 0;
-                    }
-                    else if (j >= m) {
-                        j = m - 1;
-                    }
+                    j = clip_index(j, m);
                     break;
-
             }
             raveled += j * ravel_strides[i];
 

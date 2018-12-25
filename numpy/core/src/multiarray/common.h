@@ -180,6 +180,37 @@ check_and_adjust_axis(int *axis, int ndim)
     return check_and_adjust_axis_msg(axis, ndim, Py_None);
 }
 
+/*
+ * Return an adjusted `index` for indexing into array of length `size` using
+ * wrap around (NPY_WRAP clip mode).
+ */
+static NPY_INLINE npy_intp
+wrap_index(npy_intp index, npy_intp size) {
+    if (index < 0) {
+        index = size - 1 - ((-index) - 1) % size;
+    }
+    else if (index >= size) {
+        index = index % size;
+    }
+    return index;
+}
+
+/*
+ * Return an adjusted `index` for indexing into array of length `size` using
+ * clipping (NPY_CLIP clip mode).
+ */
+static NPY_INLINE npy_intp
+clip_index(npy_intp index, npy_intp size) {
+    if (index < 0) {
+        index = 0;
+    }
+    else if (index >= size) {
+        index = size - 1;
+    }
+    return index;
+}
+
+
 /* used for some alignment checks */
 #define _ALIGN(type) offsetof(struct {char c; type v;}, v)
 /*
