@@ -5393,7 +5393,7 @@ class MaskedArray(ndarray):
         # 2017-04-11, Numpy 1.13.0, gh-8701: warn on axis default
         if axis is np._NoValue:
             axis = _deprecate_argsort_axis(self)
-
+        have_fill_value = fill_value is not None
         if fill_value is None:
             if endwith:
                 # nan > inf
@@ -5405,51 +5405,45 @@ class MaskedArray(ndarray):
                 fill_value = maximum_fill_value(self)
 
         filled = self.filled(fill_value)
-        if False and kind in {"mergesort", "stable"}:
-            # for mergesort and stablesort dispatch via lexsort on
-            # (filled, mask) to ensure masked values sort
-            # behind max/minimum_fill_value
-            if endwith:
-                breaks = self.mask
-            else:
-                breaks = ~self.mask
-
-            def argsort1d(arr):
-                return np.lexsort((arr.data, arr.mask))
-
-            if axis is np._NoValue or axis is None:
-                return np.lexsort((filled.flatten(), breaks.flatten()))
-            else:
-                filled = masked_array(filled.data, mask=breaks)
-                return np.apply_along_axis(argsort1d, axis, filled)
+        if have_fill_value:
+            return filled.argsort(axis=axis, kind=kind, order=order)
         else:
-            def argsort1d(arr):
+            if fill_value is None:  # can still be None?
+                fill_value = self.fill_value
+            side = "left" if endwith else "right"
+            def argsort1d(arr):   # type: (MaskedArray) -> array
                 values = arr.data
                 sorter = values.argsort(kind=kind, order=order)
                 if arr._mask is nomask:
                     return sorter
-
-                side = "left" if endwith else "right"
                 idx = np.searchsorted(
-                    values, arr.fill_value, side=side, sorter=sorter)
+                    values, fill_value, side=side, sorter=sorter)
                 if endwith:
                     fix_sorter = sorter[idx:]
-                    fix_mask = arr.mask[fix_sorter]
                 else:
                     fix_sorter = sorter[:idx]
-                    fix_mask = ~arr.mask[fix_sorter]
+                fix_mask = arr.mask[fix_sorter]
+                if not endwith:
+                    if fix_mask.dtype.fields:
+                        # structured mask type.
+                        fix_mask = fix_mask.copy()
+                        #  Can this fail if mask is strided?
+                        fix_mask_view = fix_mask.view(bool)
+                        np.invert(fix_mask_view, fix_mask_view)
+                    else:
+                        fix_mask = ~fix_mask
                 fix_sorter[:] = fix_sorter[fix_mask.argsort(kind="stable")]
                 return sorter
 
             filled = masked_array(filled, mask=self.mask)
+            if filled.size == 0:  # preserve shape
+                return np.empty(filled.shape, dtype=int)
+            elif filled.ndim == 0:  # (array(0))
+                return np.array([0])
             if axis is not None:
                 return np.apply_along_axis(argsort1d, axis, filled)
             else:
                 return argsort1d(filled.flatten())
-
-            if self._mask is not nomask:
-                warnings.warn("")
-            return filled.argsort(axis=axis, kind=kind, order=order)
 
     def argmin(self, axis=None, fill_value=None, out=None):
         """
