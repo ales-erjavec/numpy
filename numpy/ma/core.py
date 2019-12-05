@@ -5405,7 +5405,51 @@ class MaskedArray(ndarray):
                 fill_value = maximum_fill_value(self)
 
         filled = self.filled(fill_value)
-        return filled.argsort(axis=axis, kind=kind, order=order)
+        if False and kind in {"mergesort", "stable"}:
+            # for mergesort and stablesort dispatch via lexsort on
+            # (filled, mask) to ensure masked values sort
+            # behind max/minimum_fill_value
+            if endwith:
+                breaks = self.mask
+            else:
+                breaks = ~self.mask
+
+            def argsort1d(arr):
+                return np.lexsort((arr.data, arr.mask))
+
+            if axis is np._NoValue or axis is None:
+                return np.lexsort((filled.flatten(), breaks.flatten()))
+            else:
+                filled = masked_array(filled.data, mask=breaks)
+                return np.apply_along_axis(argsort1d, axis, filled)
+        else:
+            def argsort1d(arr):
+                values = arr.data
+                sorter = values.argsort(kind=kind, order=order)
+                if arr._mask is nomask:
+                    return sorter
+
+                side = "left" if endwith else "right"
+                idx = np.searchsorted(
+                    values, arr.fill_value, side=side, sorter=sorter)
+                if endwith:
+                    fix_sorter = sorter[idx:]
+                    fix_mask = arr.mask[fix_sorter]
+                else:
+                    fix_sorter = sorter[:idx]
+                    fix_mask = ~arr.mask[fix_sorter]
+                fix_sorter[:] = fix_sorter[fix_mask.argsort(kind="stable")]
+                return sorter
+
+            filled = masked_array(filled, mask=self.mask)
+            if axis is not None:
+                return np.apply_along_axis(argsort1d, axis, filled)
+            else:
+                return argsort1d(filled.flatten())
+
+            if self._mask is not nomask:
+                warnings.warn("")
+            return filled.argsort(axis=axis, kind=kind, order=order)
 
     def argmin(self, axis=None, fill_value=None, out=None):
         """
